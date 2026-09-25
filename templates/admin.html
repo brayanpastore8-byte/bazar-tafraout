@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pannello Moderatori Riservato | BAZAR TAFRAOUT</title>
+  <meta name="theme-color" content="#0a0c10">
+
+  <!-- Font & Icone -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Chart.js per grafico visite -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Stili -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .radio-color-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    .radio-color-card {
+      position: relative;
+      cursor: pointer;
+    }
+    .radio-color-card input {
+      position: absolute;
+      opacity: 0;
+    }
+    .radio-color-content {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.85rem;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      transition: all var(--transition-fast);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .radio-color-card input:checked + .radio-color-content {
+      border-color: var(--gold-primary);
+      background: var(--gold-subtle);
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+    }
+    .alert-box {
+      padding: 1rem 1.2rem;
+      border-radius: var(--radius-md);
+      margin-bottom: 1.5rem;
+      font-size: 0.92rem;
+      display: none;
+    }
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--status-green);
+      color: #6ee7b7;
+    }
+    .alert-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--status-red);
+      color: #fca5a5;
+    }
+    .status-badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.8rem;
+      border-radius: var(--radius-full);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Amministrazione -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="{{ url_for('index') }}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+        <i class="fas fa-arrow-left"></i> Torna alla Vetrina
+      </a>
+      <div class="brand-center">
+        <div class="brand-title">BAZAR <span>TAFRAOUT</span></div>
+        <div class="brand-subtitle">DASHBOARD RISERVATA TITOLARE</div>
+      </div>
+      <div>
+        {% if authenticated %}
+        <button id="admin-logout-btn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-color: rgba(239,68,68,0.4); color: #fca5a5;">
+          <i class="fas fa-sign-out-alt"></i> Esci
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <main style="flex: 1; padding: 2rem 1.5rem;">
+    {% if not authenticated %}
+      <!-- Form di Accesso con Password (se aperto direttamente via URL /admin) -->
+      <div class="admin-card-auth">
+        <div style="text-align: center; margin-bottom: 1.8rem;">
+          <div style="width: 60px; height: 60px; margin: 0 auto 1rem; background: var(--gold-subtle); border: 1px solid var(--gold-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold-primary); font-size: 1.6rem;">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <h2 style="font-family: var(--font-display); font-size: 1.5rem; color: #fff;">Accesso Moderatori</h2>
+          <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 0.3rem;">Area riservata esclusivamente al titolare</p>
+        </div>
+
+        <div class="admin-header-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>Attenzione: questa categoria è riservata solo al titolare del negozio e non per i clienti.</span>
+        </div>
+
+        <form id="admin-login-form">
+          <div class="form-group">
+            <label for="admin-password-input" class="form-label">Password Segreta</label>
+            <input type="password" id="admin-password-input" class="form-input" placeholder="Inserisci password..." autocomplete="current-password" required>
+          </div>
+          <div id="admin-login-error" style="color: var(--status-red); font-size: 0.85rem; margin-bottom: 1rem; min-height: 1.2rem; text-align: center;"></div>
+          <button type="submit" id="admin-submit-btn" class="btn btn-primary" style="width: 100%;">
+            <i class="fas fa-unlock"></i> Sblocca Pannello
+          </button>
+        </form>
+      </div>
+
+    {% else %}
+      <!-- ========================================================
+           DASHBOARD MODERATORE AUTENTICATO
+           ======================================================== -->
+      <div class="admin-dashboard-container">
+        
+        <!-- Avviso di Riservatezza in Cima -->
+        <div class="admin-header-warning" style="font-size: 1rem; padding: 1.2rem; margin-bottom: 2rem;">
+          <i class="fas fa-exclamation-circle" style="font-size: 1.3rem;"></i>
+          <span>Attenzione: questa categoria è riservata solo al titolare del negozio e non per i clienti.</span>
+        </div>
+
+        <!-- Feedback Notifiche -->
+        <div id="override-feedback" class="alert-box"></div>
+
+        <!-- 1. STATO ATTUALE IN TEMPO REALE -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--gold-border); border-radius: var(--radius-lg); padding: 1.6rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+          <div>
+            <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); display: block; margin-bottom: 4px;">Stato Attuale Visibile ai Clienti</span>
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+              <span class="status-indicator-dot status-dot-{{ status.color }}"></span>
+              <span style="font-size: 1.3rem; font-weight: 700; color: #fff;">{{ status.label }}</span>
+              {% if status.is_override %}
+                <span class="status-badge-live" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">
+                  <i class="fas fa-wrench"></i> Override Straordinario Attivo
+                </span>
+              {% else %}
+                <span class="status-badge-live" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3);">
+                  <i class="fas fa-robot"></i> Gestione Automatica Orari
+                </span>
+              {% endif %}
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.4rem;">
+              <strong>Avviso in vetrina:</strong> "{{ status.message }}"
+            </p>
+            {% if status.is_override and status.expires_at %}
+              <p style="color: var(--gold-glow); font-size: 0.82rem; margin-top: 0.2rem;">
+                <i class="fas fa-hourglass-half"></i> Scadenza automatica impostata: <strong>{{ status.expires_at }}</strong> (dopo tornerà automatico).
+              </p>
+            {% endif %}
+          </div>
+
+          {% if status.is_override %}
+            <button id="btn-disable-override" class="btn btn-secondary" style="border-color: var(--status-green); color: #6ee7b7;">
+              <i class="fas fa-undo"></i> Ripristina Orari Automatici
+            </button>
+          {% endif %}
+        </div>
+
+        <!-- 2. CONTATORE VISITE -->
+        <h3 style="font-family: var(--font-display); font-size: 1.35rem; color: #fff; margin-bottom: 1.2rem;">
+          <i class="fas fa-chart-line" style="color: var(--gold-primary);"></i> Monitoraggio & Contatore Visite
+        </h3>
+
+        <div class="admin-stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-calendar-day"></i>
+            </div>
+            <div>
+              <div class="stat-number">{{ stats.today }}</div>
+              <div class="stat-label">Visite Oggi</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-calendar-week"></i>
+            </div>
+            <div>
+              <div class="stat-number">{{ stats.week }}</div>
+              <div class="stat-label">Questa Settimana</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div>
+              <div class="stat-number">{{ stats.month }}</div>
+              <div class="stat-label">Questo Mese</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-users"></i>
+            </div>
+            <div>
+              <div class="stat-number">{{ stats.total }}</div>
+              <div class="stat-label">Visite Totali</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grafico Visite Chart.js -->
+        <div class="chart-wrapper">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+            <h4 style="color: var(--gold-primary); font-family: var(--font-display); font-size: 1.1rem;">
+              <i class="fas fa-chart-area"></i> Andamento Ultimi 7 Giorni
+            </h4>
+            <span style="font-size: 0.8rem; color: var(--text-dim);">Aggiornato in tempo reale</span>
+          </div>
+          <div style="height: 280px; position: relative;">
+            <canvas id="visitsChart" 
+                    data-labels='{{ stats.chart_labels | tojson }}' 
+                    data-values='{{ stats.chart_data | tojson }}'></canvas>
+          </div>
+        </div>
+
+        <!-- 3. OVERRIDE MANUALE DELLO STATO -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--gold-border); border-radius: var(--radius-lg); padding: 2rem;">
+          <div style="margin-bottom: 1.5rem;">
+            <h3 style="font-family: var(--font-display); font-size: 1.4rem; color: #fff; margin-bottom: 0.3rem;">
+              <i class="fas fa-sliders-h" style="color: var(--gold-primary);"></i> Override Manuale dello Stato del Negozio
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              Usa questo modulo se devi applicare una chiusura straordinaria (es. per inventario, ferie o motivi personali) o un'apertura festiva. Il sistema <strong>rimuoverà l'avviso automaticamente</strong> non appena scade la data impostata, tornando alla gestione ordinaria.
+            </p>
+          </div>
+
+          <form id="override-status-form">
+            <!-- Scelta Colore della Luce -->
+            <div class="form-group">
+              <label class="form-label">Scegli il Colore della Luce di Stato:</label>
+              <div class="radio-color-group">
+                <label class="radio-color-card">
+                  <input type="radio" name="status_color" value="green" {% if override.color == 'green' %}checked{% endif %}>
+                  <div class="radio-color-content">
+                    <span class="status-indicator-dot status-dot-green"></span>
+                    <span style="color: var(--status-green);">Luce Verde (Aperto)</span>
+                  </div>
+                </label>
+
+                <label class="radio-color-card">
+                  <input type="radio" name="status_color" value="orange" {% if override.color == 'orange' %}checked{% endif %}>
+                  <div class="radio-color-content">
+                    <span class="status-indicator-dot status-dot-orange"></span>
+                    <span style="color: var(--status-orange);">Luce Arancione (Avviso/Chiusura)</span>
+                  </div>
+                </label>
+
+                <label class="radio-color-card">
+                  <input type="radio" name="status_color" value="red" {% if not override.color or override.color == 'red' %}checked{% endif %}>
+                  <div class="radio-color-content">
+                    <span class="status-indicator-dot status-dot-red"></span>
+                    <span style="color: var(--status-red);">Luce Rossa (Chiuso)</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Date Inizio e Scadenza -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.2rem; margin-bottom: 1.2rem;">
+              <div class="form-group">
+                <label for="override_start" class="form-label">Data e Ora di Inizio</label>
+                <input type="datetime-local" id="override_start" class="form-input" value="{{ override.start_date }}">
+              </div>
+
+              <div class="form-group">
+                <label for="override_expires" class="form-label">Data e Ora di Fine / Scadenza *</label>
+                <input type="datetime-local" id="override_expires" class="form-input" value="{{ override.expires_at }}" required>
+                <small style="color: var(--text-dim); font-size: 0.76rem; display: block; margin-top: 4px;">Al raggiungimento di questa scadenza, il sito riattiverà gli orari normali.</small>
+              </div>
+            </div>
+
+            <!-- Testo Personalizzato Avviso -->
+            <div class="form-group">
+              <label for="override_notice" class="form-label">Testo Personalizzato dell'Avviso</label>
+              <textarea id="override_notice" class="form-input" rows="3" placeholder="Es: Oggi chiusura anticipata straordinaria per rinnovo assortimento merci. Riapriamo regolarmente domani mattina!">{{ override.notice }}</textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;">
+              <button type="submit" class="btn btn-primary" style="padding: 0.9rem 2rem;">
+                <i class="fas fa-check-circle"></i> Modifica Stato Negozio
+              </button>
+              {% if status.is_override %}
+                <button type="button" id="btn-disable-override-2" onclick="document.getElementById('btn-disable-override').click();" class="btn btn-secondary">
+                  <i class="fas fa-undo"></i> Annulla Override
+                </button>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+
+      </div>
+    {% endif %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-brand">BAZAR <span>TAFRAOUT</span> HABIB LKENS</div>
+      <div class="footer-creator">Creato dal team <strong>Rayane Lkens</strong> • brayan.pastore8@gmail.com</div>
+      <div class="footer-copy">&copy; 2026 Tutti i diritti riservati. Accesso Riservato Amministrazione.</div>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/security.js') }}"></script>
+  {% if not authenticated %}
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% else %}
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+  {% endif %}
+</body>
+</html>
